@@ -30,7 +30,7 @@ Make sure to replace `database_admin` with the appropriate username for the SSH 
 
 ### Proxychains
 
-Proxychains is a powerful tool that facilitates routing network traffic from third-party applications through HTTP or SOCKS proxies. Below are improved instructions and explanations for each command:
+Proxychains is a powerful tool that facilitates routing network traffic from third-party applications through HTTP or SOCKS proxies.
 
 1.  Edit the proxychains configuration file by running the following command:
 
@@ -67,3 +67,33 @@ Proxychains is a powerful tool that facilitates routing network traffic from thi
     * `-n`: Skips DNS resolution to speed up the scan by not attempting to resolve hostnames to IP addresses.
     * `-Pn`: Skips the host discovery stage, assuming the target host is up and actively filtering ports.
     * `172.16.50.217`: The target IP address to be scanned.
+
+***
+
+### Sshuttle
+
+`sshuttle` is a powerful tool that utilizes SSH connections to create a VPN-like environment by directing traffic through the SSH tunnel.
+
+1.  First, we need to set up a socat listener on the web server (192.168.50.63) to tunnel incoming traffic on port 2222 to the internal database server at 10.4.50.215.
+
+    ```
+    webserver@webserver01:$ socat TCP-LISTEN:2222,fork TCP:10.4.50.215:22
+    ```
+
+    This command sets up a listener on port 2222 of the web server (192.168.50.63). Any incoming traffic to this port will be forwarded to the SSH service on the internal database server at 10.4.50.215.
+2.  Next, we can use sshuttle on the Kali machine to establish the VPN-like tunnel through the SSH connection.
+
+    {% code overflow="wrap" %}
+    ```
+    kali@kali:~$ sshuttle -r database_admin@192.168.50.63:2222 10.4.50.0/24 172.16.50.0/24
+    ```
+    {% endcode %}
+
+    The `sshuttle` command connects to the SSH server on internal database server through the web server at 192.168.50.63 with the username `database_admin` and utilizes the tunnel on port 2222. The IP subnets `10.4.50.0/24` and `172.16.50.0/24` are specified, meaning that any requests made to hosts in these subnets will be transparently pushed through the SSH connection.
+3.  With the tunnel set up, we can now use regular commands, such as `smbclient`, to access hosts in the specified subnets.
+
+    ```
+    kali@kali:~$ smbclient -L //172.16.50.217/ -U hr_admin --password=Welcome1234
+    ```
+
+    This `smbclient` command lists the available shares on the target host at IP `172.16.50.217`. The `-U` option specifies the username `hr_admin`, and the `--password` option provides the corresponding password `Welcome1234`.
